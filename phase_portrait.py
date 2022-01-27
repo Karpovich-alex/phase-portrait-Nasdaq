@@ -12,7 +12,7 @@ from matplotlib.colors import ListedColormap, BoundaryNorm
 from matplotlib.collections import LineCollection
 
 
-def slice_data(df, slice_period, reset_index=False):
+def slice_data(df, slice_period, reset_index=True):
     # 2 сортировки, чтобы последняя дата оставалась
     if reset_index:
         return df.copy().sort_values(by='date', ascending=False)[::slice_period].sort_values(by='date').reset_index(
@@ -108,7 +108,6 @@ def plot_phase_portrait(xx, dates, deriv, tt, name, ticks_num=5, save_fig_name='
     if len(x_limits) == 2:
         plt.xlim(x_limits)
     plt.grid()
-    #     plt.show()
     if save_fig_name:
         plt.savefig(f"{save_fig_name}.png", dpi=200)
 
@@ -129,12 +128,16 @@ def calc_phase_portrait(df, slice_period=1, normalize=''):
 
     x = df.index.to_series() + 1
     y = df['value']
-
-    xx, deriv = get_phase_portrait(x, y, step_spline=.05, step_deriv=.01, deriv_num=2)
-
-    tt = get_arange(x.shape[0], step=.0005)
+    x, y, xx, deriv, tt = calc_phase_portrait_raw(x, y)
 
     return x, y, xx, deriv, tt, slice_period, df['date']
+
+
+def calc_phase_portrait_raw(x, y):
+    xx, deriv = get_phase_portrait(x, y, step_spline=.05, step_deriv=.01, deriv_num=2)
+    tt = get_arange(x.shape[0], step=.0005)
+
+    return x, y, xx, deriv, tt
 
 
 def generate_phase_portrait(df, slices, normalize=''):
