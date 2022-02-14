@@ -1,15 +1,11 @@
-import scipy
-from scipy.interpolate import CubicSpline as CubicSpline
-from scipy.interpolate import interp1d as interp1d
 import pandas as pd
 import numpy as np
 # интерполяция
 from scipy.interpolate import interp1d
+from scipy.interpolate import CubicSpline as CubicSpline
 # Рисование графиков
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-from matplotlib.colors import ListedColormap, BoundaryNorm
-from matplotlib.collections import LineCollection
 
 
 def slice_data(df, slice_period, reset_index=True):
