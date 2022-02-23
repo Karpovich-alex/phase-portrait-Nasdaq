@@ -56,7 +56,7 @@ def interpolate(ppf, step):
 def get_phase_portrait(x, y, step_spline=0.05, step_deriv=.01, deriv_num=4):
     # Высчитываем данные портрета и xx
     xx = get_arange(x.shape[0], step=step_spline)
-    spline = CubicSpline(x, y, bc_type='clamped')
+    spline = CubicSpline(x, y, bc_type='not-a-knot')  # clamped
     # yy = spline(xx)
     pp = deriv_spline(spline, deriv_num)
     ppf = calc_spline_values(xx, pp)
@@ -76,7 +76,61 @@ def get_ticks(arr, num=5):
         return [arr[i] for i in mask]
 
 
-def plot_phase_portrait(xx, dates, deriv, tt, name, ticks_num=5, save_fig_name='', y_limits=(), x_limits=()):
+def plot_phase_portrait(x, tt, deriv, dates, start_date='', end_date='', cbar_ticks_num=5, graph_name='', ylabel='Rate',
+                        xlabel='Value', cmap=mpl.cm.plasma):
+    '''
+
+    :param deriv: Производные сплайна.
+    :param tt: Интерполированные значения x.
+    :param dates: Даты.
+    :param start_date: Начальная дата для выделения цветом.
+    :param end_date: Конечная дата для выделения цветом.
+    :param cbar_ticks_num: Количество подписей на цветовой шкале.
+    :param graph_name: Название графика.
+    :param ylabel: Название оси Y.
+    :param xlabel: Название оси X.
+    :param cmap: Цветовая схема для наложения на график.
+    :return:
+    '''
+    plt.rcParams.update({'xtick.labelsize': 15})
+    plt.rcParams.update({'ytick.labelsize': 15})
+
+    fig, ax = plt.subplots()
+    if not start_date and not end_date:
+        start_date = dates.min()
+        end_date = dates.max()
+
+    ## Находим маску для выбранного периода
+    dates_colored_mask = get_dates_mask(dates, start_date, end_date)
+    colored_mask = get_mask_tt(x, tt, dates_mask=dates_colored_mask)
+    tt_colored = tt[colored_mask]
+
+    ## Рисуем фоновый график
+    ax.plot(deriv[0], deriv[1], ':g', alpha=0.7)
+
+    ### Красим выбранный период графика
+    norm = mpl.colors.Normalize(vmin=tt_colored.min(), vmax=tt_colored.max())
+    ax.scatter(deriv[0][colored_mask], deriv[1][colored_mask], c=tt, cmap=cmap, s=0.1)
+    cbar = fig.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=cmap),
+                        orientation='vertical', ticks=get_ticks(tt_colored, cbar_ticks_num))
+    cbar.ax.set_yticklabels(map(lambda x: x.strftime('%d.%m.%y'), get_ticks(dates[dates_colored_mask], cbar_ticks_num)))
+    ###
+
+    if graph_name:
+        plt.title(graph_name)
+    ax.set_ylabel(ylabel)
+    ax.set_xlabel(xlabel)
+
+    # Выделение линии Y=0
+    plt.axhline(y=0, color='k', linestyle='-')
+
+    # настройка размера фигуры
+    fig.set_figheight(8)
+    fig.set_figwidth(9)
+    plt.show()
+
+
+def plot_phase_portrait_old(xx, dates, deriv, tt, name, ticks_num=5, save_fig_name='', y_limits=(), x_limits=()):
     cmap = plt.cm.plasma
     norm = plt.Normalize(xx.min(), xx.max())
 
@@ -153,15 +207,17 @@ def generate_png(path, name, df, generated_data, x_lim, y_lim, upscale=1):
                                 slice_period)
         deriv = list(map(lambda x: x * upscale, deriv))
 
-        plot_phase_portrait(xx, df['date'], deriv, tt, f"{name} t={slice_period}", ticks_num=5,
-                            save_fig_name=path + filename, y_limits=y_lim, x_limits=x_lim)
+        plot_phase_portrait_old(xx, df['date'], deriv, tt, f"{name} t={slice_period}", ticks_num=5,
+                                save_fig_name=path + filename, y_limits=y_lim, x_limits=x_lim)
 
 
-def get_mask_tt(x, tt, dates, start_date, end_date):
-    date_filter = get_dates_mask(dates, start_date, end_date)
-    filtered_x = x[date_filter]
-    min_x, max_x = filtered_x.min(), filtered_x.max()
-    return (tt >= min_x) & (tt <= max_x)
+def get_mask_tt(x, tt, dates=None, start_date=None, end_date=None, dates_mask=None):
+    if dates_mask is None:
+        if not dates or not start_date or not end_date:
+            raise Exception("You should pass dates_mask or dates, start_date and end_date")
+        dates_mask = get_dates_mask(dates, start_date, end_date)
+    filtered_x = x[dates_mask]
+    return (tt >= filtered_x.min()) & (tt <= filtered_x.max())
 
 
 def get_dates_mask(dates, start_date, end_date):
