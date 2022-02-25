@@ -84,7 +84,7 @@ def get_ticks(arr, num=5):
 
 def plot_phase_portrait(x, tt, deriv, dates, start_date='', end_date='', cbar_ticks_num=5, graph_name='', ylabel='Rate',
                         xlabel='Value', cmap=mpl.cm.plasma, fig=None, ax=None, plot_bar=True,
-                        background_graph_params=None, rcParams=None):
+                        background_graph_params=None, rcParams=None, crop=False):
     '''
 
     :param rcParams: Параметры для настройки графика в целом.
@@ -120,7 +120,8 @@ def plot_phase_portrait(x, tt, deriv, dates, start_date='', end_date='', cbar_ti
     tt_colored = tt[colored_mask]
 
     ## Рисуем фоновый график
-    ax.plot(deriv[0], deriv[1], alpha=0.7, **background_graph_params)
+    if not background_graph_params.pop('disable', False):
+        ax.plot(deriv[0], deriv[1], alpha=0.7, **background_graph_params)
 
     ### Красим выбранный период графика
     norm = mpl.colors.Normalize(vmin=tt_colored.min(), vmax=tt_colored.max())
@@ -131,7 +132,10 @@ def plot_phase_portrait(x, tt, deriv, dates, start_date='', end_date='', cbar_ti
         cbar.ax.set_yticklabels(
             map(lambda x: x.strftime('%d.%m.%y'), get_ticks(dates[dates_colored_mask], cbar_ticks_num)))
     ###
-
+    if crop:
+        if type(crop) == tuple:
+            ax.set_xlim(crop)
+        ax.set_xlim((deriv[0][colored_mask].min()-500, deriv[0][colored_mask].max()+500))
     if graph_name:
         ax.set_title(graph_name)
     ax.set_ylabel(ylabel)
