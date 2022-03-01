@@ -84,10 +84,9 @@ def get_ticks(arr, num=5):
 
 def plot_phase_portrait(x, tt, deriv, dates, start_date='', end_date='', cbar_ticks_num=5, graph_name='', ylabel='Rate',
                         xlabel='Value', cmap=mpl.cm.plasma, fig=None, ax=None, plot_bar=True,
-                        background_graph_params=None, rcParams=None, crop=False):
+                        background_graph_params=None, crop=False):
     '''
 
-    :param rcParams: Параметры для настройки графика в целом.
     :param background_graph_params: Параметры для фонового графика.
     :param deriv: Производные сплайна.
     :param tt: Интерполированные значения x.
@@ -103,9 +102,6 @@ def plot_phase_portrait(x, tt, deriv, dates, start_date='', end_date='', cbar_ti
     '''
     if not background_graph_params:
         background_graph_params = {}
-    if not rcParams:
-        rcParams = {'xtick.labelsize': 15, 'ytick.labelsize': 15}
-    plt.rcParams.update(rcParams)
 
     if fig is None or ax is None:
         fig, ax = plt.subplots()
