@@ -25,7 +25,7 @@ def get_interpotate_range(array, step):
 
 
 def deriv_spline(spline, n):
-    # Находим производные сплайна порядка 0-3
+    # Находим производные сплайна порядка 0-n
     pp = []
     for i in range(n):
         pp.append(spline.derivative(i))
@@ -45,9 +45,13 @@ def interpolate(ppf, step, params):
         params = {}
     kind = params.get('interpolate.kind', 'cubic')
     fill_value = params.get('interpolate.fill_value', 'extrapolate')
+    boundaries = params.get('interpolate.boundaries', {})
     # Задаем интервалы для интерполяции
-    t = np.arange(1, ppf[0].shape[0] + 1)
-    pp1f_y = get_arange(ppf[0].shape[0], step=step)
+    t = np.arange(boundaries.get('t.min', 1), boundaries.get('t.max', ppf[0].shape[0] + 1),
+                  step=boundaries.get('t.step', 1))
+    pp1f_y = np.arange(boundaries.get('pp1f_y.min', 1), boundaries.get('pp1f_y.max', ppf[0].shape[0] + step),
+                       step=boundaries.get('pp1f_y.step', step))
+    # pp1f_y = get_arange(ppf[0].shape[0], step=step)
     # Производим интерполяцию
     interp1 = lambda x: interp1d(t, x, kind=kind, fill_value=fill_value)(pp1f_y)  # нужен ли параметр fill_value
     deriv = []
@@ -56,14 +60,16 @@ def interpolate(ppf, step, params):
     return deriv
 
 
-def get_phase_portrait(x, y, step_spline=0.05, step_deriv=.01, deriv_num=4, params=None):
+def get_phase_portrait(x, y, step_spline=0.05, step_deriv=.01, deriv_num=2, params=None, step_type='step'):
     if params is None:
         params = {}
     bc_type = params.get('get_phase_portrait.bc_type', 'not-a-knot')
     # Высчитываем данные портрета и xx
-    xx = get_arange(x.shape[0], step=step_spline)
-    spline = CubicSpline(x, y, bc_type=bc_type)  # clamped
-    # yy = spline(xx)
+    if step_type == 'step':
+        xx = get_arange(x.shape[0], step=step_spline)
+    else:
+        xx = np.arange(x.min(), x.max(), step=step_spline)
+    spline = CubicSpline(x, y, bc_type=bc_type)
     pp = deriv_spline(spline, deriv_num)
     ppf = calc_spline_values(xx, pp)
 
@@ -80,6 +86,13 @@ def get_ticks(arr, num=5):
         return [arr.iloc[i] for i in mask]
     else:
         return [arr[i] for i in mask]
+
+
+def generate_df(data, slice_period):
+    df = data.copy()
+    df = slice_data(df, slice_period=slice_period, reset_index=False)
+    df = df.reset_index()
+    return df
 
 
 def plot_phase_portrait(x, tt, deriv, dates, start_date='', end_date='', cbar_ticks_num=5, graph_name='', ylabel='Rate',
@@ -131,7 +144,7 @@ def plot_phase_portrait(x, tt, deriv, dates, start_date='', end_date='', cbar_ti
     if crop:
         if type(crop) == tuple:
             ax.set_xlim(crop)
-        ax.set_xlim((deriv[0][colored_mask].min()-500, deriv[0][colored_mask].max()+500))
+        ax.set_xlim((deriv[0][colored_mask].min() - 500, deriv[0][colored_mask].max() + 500))
     if graph_name:
         ax.set_title(graph_name)
     ax.set_ylabel(ylabel)
@@ -167,10 +180,14 @@ def calc_phase_portrait_raw(x, y, params=None):
     step_deriv = params.get('calc_phase_portrait_raw.step_deriv', .01)
     deriv_num = params.get('calc_phase_portrait_raw.deriv_num', 2)
     tt_step = params.get('calc_phase_portrait_raw.tt_step', .0005)
+    step_type = params.get('calc_phase_portrait_raw.step_type', 'step')
 
     xx, deriv = get_phase_portrait(x, y, step_spline=step_spline, step_deriv=step_deriv, deriv_num=deriv_num,
-                                   params=params)
-    tt = get_arange(x.shape[0], step=tt_step)
+                                   params=params, step_type=step_type)
+    if step_type == 'step':
+        tt = get_arange(x.shape[0], step=tt_step)
+    else:
+        tt = np.arange(x.min(), x.max(), step=tt_step)
 
     return x, y, xx, deriv, tt
 
